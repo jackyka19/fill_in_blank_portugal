@@ -1,0 +1,181 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedra Filosofal Fill-in-the-Blank</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .line {
+            margin: 10px 0;
+        }
+        .input-field {
+            padding: 5px;
+            width: 100px;
+        }
+        .correct {
+            color: green;
+            font-weight: bold;
+        }
+        .incorrect {
+            color: red;
+            font-weight: bold;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pedra Filosofal Fill-in-the-Blank Practice</h1>
+    <div id="poem"></div>
+    <button onclick="checkAnswers()">Check Answers</button>
+    <button onclick="resetInputs()">Reset</button>
+    <div id="result"></div>
+
+    <script>
+        const poem = `Eles não sabem que o sonho
+é uma constante da vida
+tão concreta e definida
+como outra coisa qualquer,
+como esta pedra cinzenta
+em que me sento e descanso,
+como este ribeiro manso,
+em serenos sobressaltos
+como estes pinheiros altos
+que em verde e ouro se agitam
+como estas aves que gritam
+em bebedeiras de azul.
+Eles não sabem que o sonho
+é vinho, é espuma, é fermento,
+bichinho álacre e sedento,
+de focinho pontiagudo,
+que fossa através de tudo
+num perpétuo movimento.
+Eles não sabem que o sonho
+é tela, é cor, é pincel,
+base, fuste, capitel.
+arco em ogiva, vitral,
+pináculo de catedral,
+contraponto, sinfonia,
+máscara grega, magia,
+que é retorta de alquimista,
+mapa do mundo distante,
+rosa dos ventos, Infante,
+caravela quinhentista,
+que é Cabo da Boa Esperança,
+ouro, canela, marfim,
+florete de espadachim,
+bastidor, passo de dança.,
+Colombina e Arlequim,
+passarola voadora,
+pára-raios, locomotiva,
+barco de proa festiva,
+alto-forno, geradora,
+cisão do átomo, radar,
+ultra som televisão
+desembarque em foguetão
+na superfície lunar.
+Eles não sabem, nem sonham,
+que o sonho comanda a vida.
+Que sempre que um homem sonha
+o mundo pula e avança
+como bola colorida
+entre a mãos de uma criança.`;
+
+        const lines = poem.split('\n').filter(line => line.trim());
+        const answers = [];
+        const poemContainer = document.getElementById('poem');
+
+        // Generate fill-in-the-blank lines
+        lines.forEach((line, index) => {
+            const words = line.trim().split(' ');
+            const lastWord = words[words.length - 1].replace(/[.,!?]/g, '');
+            answers.push(lastWord);
+            words[words.length - 1] = `<input type="text" class="input-field" data-index="${index}" data-answer="${lastWord}">` + (line.match(/[.,!?]$/) ? line.slice(-1) : '');
+            const div = document.createElement('div');
+            div.className = 'line';
+            div.innerHTML = `Line ${index + 1}: ${words.join(' ')}`;
+            poemContainer.appendChild(div);
+        });
+
+        function checkAnswers() {
+            const inputs = document.querySelectorAll('.input-field');
+            let correctCount = 0;
+            inputs.forEach(input => {
+                const userAnswer = input.value.trim();
+                const correctAnswer = input.dataset.answer;
+                input.classList.remove('correct', 'incorrect');
+                if (userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
+                    input.classList.add('correct');
+                    input.value = `${userAnswer} ✓`;
+                    correctCount++;
+                } else {
+                    input.classList.add('incorrect');
+                    input.value = userAnswer ? `${userAnswer} ✗` : '✗';
+                }
+                input.disabled = true;
+            });
+            const result = document.getElementById('result');
+            result.innerHTML = `You got ${correctCount} out of ${lines.length} correct!`;
+        }
+
+        function resetInputs() {
+            const inputs = document.querySelectorAll('.input-field');
+            inputs.forEach(input => {
+                input.value = '';
+                input.classList.remove('correct', 'incorrect');
+                input.disabled = false;
+            });
+            document.getElementById('result').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
