@@ -1,43 +1,4 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -53,10 +14,13 @@
         }
         .line {
             margin: 10px 0;
+            display: flex;
+            align-items: center;
         }
         .input-field {
             padding: 5px;
             width: 100px;
+            margin-right: 10px;
         }
         .correct {
             color: green;
@@ -65,6 +29,10 @@
         .incorrect {
             color: red;
             font-weight: bold;
+        }
+        .answer-hint {
+            color: #555;
+            font-style: italic;
         }
         button {
             padding: 10px 20px;
@@ -142,7 +110,7 @@ entre a mãos de uma criança.`;
             words[words.length - 1] = `<input type="text" class="input-field" data-index="${index}" data-answer="${lastWord}">` + (line.match(/[.,!?]$/) ? line.slice(-1) : '');
             const div = document.createElement('div');
             div.className = 'line';
-            div.innerHTML = `Line ${index + 1}: ${words.join(' ')}`;
+            div.innerHTML = `Line ${index + 1}: ${words.join(' ')} <span class="answer-hint" id="hint-${index}"></span>`;
             poemContainer.appendChild(div);
         });
 
@@ -152,7 +120,9 @@ entre a mãos de uma criança.`;
             inputs.forEach(input => {
                 const userAnswer = input.value.trim();
                 const correctAnswer = input.dataset.answer;
+                const hintSpan = document.getElementById(`hint-${input.dataset.index}`);
                 input.classList.remove('correct', 'incorrect');
+                hintSpan.innerHTML = '';
                 if (userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
                     input.classList.add('correct');
                     input.value = `${userAnswer} ✓`;
@@ -160,6 +130,7 @@ entre a mãos de uma criança.`;
                 } else {
                     input.classList.add('incorrect');
                     input.value = userAnswer ? `${userAnswer} ✗` : '✗';
+                    hintSpan.innerHTML = `Correct answer: ${correctAnswer}`;
                 }
                 input.disabled = true;
             });
@@ -173,6 +144,8 @@ entre a mãos de uma criança.`;
                 input.value = '';
                 input.classList.remove('correct', 'incorrect');
                 input.disabled = false;
+                const hintSpan = document.getElementById(`hint-${input.dataset.index}`);
+                hintSpan.innerHTML = '';
             });
             document.getElementById('result').innerHTML = '';
         }
