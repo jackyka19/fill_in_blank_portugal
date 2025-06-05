@@ -16,28 +16,41 @@
             margin: 10px 0;
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
         }
         .input-field {
             padding: 5px;
-            width: 100px;
-            margin-right: 10px;
+            width: 120px;
+            margin-right: 15px;
+            border: 1px solid #ccc;
         }
         .correct {
+            border-color: green;
             color: green;
             font-weight: bold;
         }
         .incorrect {
+            border-color: red;
             color: red;
             font-weight: bold;
         }
         .answer-hint {
-            color: #555;
+            color: #333;
             font-style: italic;
+            margin-left: 10px;
+            display: inline-block;
         }
         button {
             padding: 10px 20px;
-            margin: 10px 0;
+            margin: 10px 5px;
             cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
@@ -46,7 +59,7 @@
     <div id="poem"></div>
     <button onclick="checkAnswers()">Check Answers</button>
     <button onclick="resetInputs()">Reset</button>
-    <div id="result"></div>
+    <div id="result" style="margin-top: 20px; font-weight: bold;"></div>
 
     <script>
         const poem = `Eles não sabem que o sonho
@@ -105,9 +118,11 @@ entre a mãos de uma criança.`;
         // Generate fill-in-the-blank lines
         lines.forEach((line, index) => {
             const words = line.trim().split(' ');
+            if (words.length === 0) return; // Skip empty lines
             const lastWord = words[words.length - 1].replace(/[.,!?]/g, '');
             answers.push(lastWord);
-            words[words.length - 1] = `<input type="text" class="input-field" data-index="${index}" data-answer="${lastWord}">` + (line.match(/[.,!?]$/) ? line.slice(-1) : '');
+            const punctuation = line.match(/[.,!?]$/) ? line.slice(-1) : '';
+            words[words.length - 1] = `<input type="text" class="input-field" data-index="${index}" data-answer="${lastWord}">` + punctuation;
             const div = document.createElement('div');
             div.className = 'line';
             div.innerHTML = `Line ${index + 1}: ${words.join(' ')} <span class="answer-hint" id="hint-${index}"></span>`;
@@ -117,20 +132,27 @@ entre a mãos de uma criança.`;
         function checkAnswers() {
             const inputs = document.querySelectorAll('.input-field');
             let correctCount = 0;
+            console.log('Checking answers...');
             inputs.forEach(input => {
-                const userAnswer = input.value.trim();
-                const correctAnswer = input.dataset.answer;
-                const hintSpan = document.getElementById(`hint-${input.dataset.index}`);
+                const index = input.dataset.index;
+                const userAnswer = input.value.trim().toLowerCase();
+                const correctAnswer = input.dataset.answer.toLowerCase();
+                const hintSpan = document.getElementById(`hint-${index}`);
                 input.classList.remove('correct', 'incorrect');
-                hintSpan.innerHTML = '';
-                if (userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
+                if (hintSpan) hintSpan.innerHTML = '';
+                console.log(`Line ${index}: User input = "${userAnswer}", Correct answer = "${correctAnswer}"`);
+                if (userAnswer === correctAnswer) {
                     input.classList.add('correct');
-                    input.value = `${userAnswer} ✓`;
+                    input.value = `${input.value.trim()} ✓`;
                     correctCount++;
                 } else {
                     input.classList.add('incorrect');
-                    input.value = userAnswer ? `${userAnswer} ✗` : '✗';
-                    hintSpan.innerHTML = `Correct answer: ${correctAnswer}`;
+                    input.value = userAnswer ? `${input.value.trim()} ✗` : '✗';
+                    if (hintSpan) {
+                        hintSpan.innerHTML = `Correct answer: ${input.dataset.answer}`;
+                    } else {
+                        console.warn(`Hint span not found for index ${index}`);
+                    }
                 }
                 input.disabled = true;
             });
@@ -145,9 +167,10 @@ entre a mãos de uma criança.`;
                 input.classList.remove('correct', 'incorrect');
                 input.disabled = false;
                 const hintSpan = document.getElementById(`hint-${input.dataset.index}`);
-                hintSpan.innerHTML = '';
+                if (hintSpan) hintSpan.innerHTML = '';
             });
             document.getElementById('result').innerHTML = '';
+            console.log('Inputs reset');
         }
     </script>
 </body>
